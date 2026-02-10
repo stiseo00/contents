@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관심사 선택</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div>
+        <h1>관심사 선택</h1>
+        <p class="subtitle">원하는 카테고리를 골라주세요. (다중 선택 가능)</p>
+      </div>
+    </header>
+
+    <form class="prefs" method="post" action="/preferences">
+      <div class="grid">
+        {% for cat in categories %}
+          <label class="check">
+            <input
+              type="checkbox"
+              name="categories"
+              value="{{ cat.id }}"
+              {% if cat.id in selected %}checked{% endif %}
+            >
+            <span>{{ cat.label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      <div class="actions">
+        <button class="btn primary" type="submit">저장</button>
+        <a class="btn ghost" href="/">뒤로 가기</a>
+      </div>
+    </form>
+  </div>
+</body>
+</html>

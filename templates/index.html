@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관심사 뉴스</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary: #64748b;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --error: #ef4444;
+            --success: #10b981;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        /* Header */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 44px;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: var(--bg);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+        }
+
+        /* Favorite Categories Bar */
+        .favorite-section {
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+            display: none;
+        }
+
+        .favorite-section.visible {
+            display: block;
+        }
+
+        .favorite-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .favorite-chips {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* Category Ticker (Auto-scroll) */
+        .category-ticker-section {
+            padding: 16px 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .category-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .category-ticker-wrapper {
+            position: relative;
+            overflow: hidden;
+            mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
+            -webkit-mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
+        }
+
+        .category-ticker {
+            display: flex;
+            gap: 8px;
+            will-change: transform;
+        }
+
+        .category-ticker.paused {
+            animation-play-state: paused;
+        }
+
+        .category-chip {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .category-chip:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: #eff6ff;
+        }
+
+        .category-chip.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .category-chip.active:hover {
+            background: var(--primary-hover);
+        }
+
+        .favorite-star {
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+            min-width: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .favorite-star:hover {
+            transform: scale(1.2);
+        }
+
+        .favorite-star.active {
+            color: #fbbf24;
+        }
+
+        /* Interest Categories View */
+        .interest-view {
+            display: none;
+        }
+
+        .interest-view.active {
+            display: block;
+        }
+
+        .interest-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 24px;
+        }
+
+        .interest-selected {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .interest-chip {
+            background: var(--primary);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .interest-chip .remove {
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .interest-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        .interest-section {
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 24px;
+        }
+
+        .interest-section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Interest Selector Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .modal-close:hover {
+            background: var(--bg);
+        }
+
+        .modal-content {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .interest-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .interest-checkbox-item:hover {
+            background: var(--bg);
+        }
+
+        .interest-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* News Grid */
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 20px;
+            padding: 24px 0;
+        }
+
+        @media (min-width: 640px) {
+            .news-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .news-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .news-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .news-card:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .news-image-wrapper {
+            width: 100%;
+            height: 200px;
+            background: var(--bg);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .news-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .news-card:hover .news-image {
+            transform: scale(1.05);
+        }
+
+        .news-image-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 48px;
+        }
+
+        .news-content {
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .news-source {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .news-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .news-summary {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 16px;
+            flex: 1;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .news-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Loading, Empty, Error States */
+        .loading-state, .empty-state, .error-state {
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .no-selection {
+            padding: 120px 20px;
+            text-align: center;
+        }
+
+        .no-selection-icon {
+            font-size: 80px;
+            margin-bottom: 24px;
+            opacity: 0.3;
+        }
+
+        .status-bar {
+            padding: 16px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--text-primary);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: var(--shadow-lg);
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 1000;
+            animation: slideUp 0.3s ease;
+            max-width: 400px;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Auto-scroll Animation */
+        @keyframes ticker {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        .category-ticker.auto-scroll {
+            animation: ticker 60s linear infinite;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .category-ticker.auto-scroll {
+                animation: none;
+            }
+        }
+
+        /* Accessibility */
+        *:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <h1>관심사 뉴스</h1>
+                <div class="header-actions">
+                    <button class="btn btn-primary" id="interestViewBtn" onclick="toggleInterestView()">
+                        <span>⭐</span>
+                        <span>관심 카테고리 보기</span>
+                    </button>
+                    <button class="btn" id="refreshBtn" onclick="refreshNews()" disabled>
+                        <span>🔄</span>
+                        <span>새로고침</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Favorite Categories -->
+        <section class="favorite-section" id="favoriteSection">
+            <div class="favorite-label">⭐ 내 즐겨찾기</div>
+            <div class="favorite-chips" id="favoriteChips"></div>
+        </section>
+
+        <!-- Category Ticker -->
+        <section class="category-ticker-section">
+            <div class="category-label">전체 카테고리</div>
+            <div class="category-ticker-wrapper">
+                <div class="category-ticker auto-scroll" id="categoryTicker"></div>
+            </div>
+        </section>
+
+        <!-- Normal View -->
+        <div id="normalView">
+            <div class="status-bar" id="statusBar" style="display: none;">
+                <span class="status-text" id="statusText"></span>
+            </div>
+
+            <div id="contentArea">
+                <div class="no-selection" id="noSelection">
+                    <div class="no-selection-icon">📰</div>
+                    <div class="no-selection-text">위에서 관심있는 카테고리를 선택해주세요</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interest View -->
+        <div class="interest-view" id="interestView">
+            <div class="interest-header">
+                <div class="interest-selected" id="interestSelected"></div>
+                <button class="btn" onclick="openInterestModal()">
+                    <span>✏️</span>
+                    <span>편집</span>
+                </button>
+            </div>
+            <div class="interest-sections" id="interestSections"></div>
+        </div>
+    </main>
+
+    <!-- Interest Selector Modal -->
+    <div class="modal-overlay" id="interestModal" onclick="if(event.target===this) closeInterestModal()">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">관심 카테고리 선택</h2>
+                <button class="modal-close" onclick="closeInterestModal()">×</button>
+            </div>
+            <div class="modal-content" id="interestModalContent"></div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeInterestModal()">취소</button>
+                <button class="btn btn-primary" onclick="saveInterestCategories()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script>
+        let currentCategory = null;
+        let categories = {};
+        let allNews = [];
+        let favoriteCategories = [];
+        let interestCategories = [];
+        let isInterestView = false;
+        let tickerAnimationId = null;
+        let isUserInteracting = false;
+        let autoScrollPaused = false;
+
+        // localStorage 키
+        const STORAGE_KEYS = {
+            favorites: 'favoriteCategories',
+            interests: 'interestCategories'
+        };
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStorage();
+            loadCategories();
+            
+            // URL 파라미터에서 카테고리 확인
+            const urlParams = new URLSearchParams(window.location.search);
+            const categoryParam = urlParams.get('category');
+            if (categoryParam) {
+                selectCategory(categoryParam);
+            }
+        });
+
+        // localStorage 로드
+        function loadStorage() {
+            try {
+                const favs = localStorage.getItem(STORAGE_KEYS.favorites);
+                const interests = localStorage.getItem(STORAGE_KEYS.interests);
+                favoriteCategories = favs ? JSON.parse(favs) : [];
+                interestCategories = interests ? JSON.parse(interests) : [];
+            } catch (e) {
+                console.error('localStorage 로드 오류:', e);
+                favoriteCategories = [];
+                interestCategories = [];
+            }
+        }
+
+        // localStorage 저장
+        function saveStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEYS.favorites, JSON.stringify(favoriteCategories));
+                localStorage.setItem(STORAGE_KEYS.interests, JSON.stringify(interestCategories));
+            } catch (e) {
+                console.error('localStorage 저장 오류:', e);
+            }
+        }
+
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/categories');
+                const data = await response.json();
+                
+                if (data.success) {
+                    categories = data.categories;
+                    displayCategories();
+                    displayFavorites();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('카테고리를 불러오는데 실패했습니다.', 'error');
+            }
+        }
+
+        function displayCategories() {
+            const ticker = document.getElementById('categoryTicker');
+            ticker.innerHTML = '';
+
+            // 카테고리를 배열로 변환
+            const categoryArray = Object.entries(categories).map(([id, label]) => ({ id, label }));
+            
+            // 무한 루프를 위해 2번 복제
+            const doubledCategories = [...categoryArray, ...categoryArray];
+            
+            doubledCategories.forEach(({ id, label }) => {
+                const chip = createCategoryChip(id, label, false);
+                ticker.appendChild(chip);
+            });
+
+            // 자동 스크롤 시작
+            startAutoScroll();
+        }
+
+        function createCategoryChip(id, label, isFavorite = false) {
+            const chip = document.createElement('button');
+            chip.className = 'category-chip';
+            chip.dataset.categoryId = id;
+            chip.setAttribute('aria-label', `${label} 카테고리 선택`);
+            
+            const isFav = favoriteCategories.includes(id);
+            
+            chip.innerHTML = `
+                ${isFavorite ? `<span class="favorite-star active" onclick="event.stopPropagation(); toggleFavorite('${id}')">⭐</span>` : ''}
+                <span>${label}</span>
+                ${!isFavorite ? `<span class="favorite-star ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); toggleFavorite('${id}')">${isFav ? '⭐' : '☆'}</span>` : ''}
+            `;
+            
+            chip.onclick = (e) => {
+                if (!e.target.classList.contains('favorite-star')) {
+                    selectCategory(id);
+                }
+            };
+
+            return chip;
+        }
+
+        function displayFavorites() {
+            const section = document.getElementById('favoriteSection');
+            const container = document.getElementById('favoriteChips');
+            container.innerHTML = '';
+
+            if (favoriteCategories.length === 0) {
+                section.classList.remove('visible');
+                return;
+            }
+
+            section.classList.add('visible');
+
+            favoriteCategories.forEach(id => {
+                if (categories[id]) {
+                    const chip = createCategoryChip(id, categories[id], true);
+                    container.appendChild(chip);
+                }
+            });
+        }
+
+        function toggleFavorite(categoryId) {
+            const index = favoriteCategories.indexOf(categoryId);
+            if (index > -1) {
+                favoriteCategories.splice(index, 1);
+            } else {
+                favoriteCategories.push(categoryId);
+            }
+            saveStorage();
+            displayFavorites();
+            displayCategories();
+            showToast(index > -1 ? '즐겨찾기에서 제거되었습니다' : '즐겨찾기에 추가되었습니다', 'success');
+        }
+
+        function startAutoScroll() {
+            const ticker = document.getElementById('categoryTicker');
+            if (tickerAnimationId) {
+                cancelAnimationFrame(tickerAnimationId);
+            }
+
+            // prefers-reduced-motion 체크
+            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (prefersReducedMotion) {
+                return;
+            }
+
+            let position = 0;
+            const speed = 0.5; // 픽셀/프레임
+
+            function animate() {
+                if (!autoScrollPaused && !isUserInteracting) {
+                    position -= speed;
+                    const ticker = document.getElementById('categoryTicker');
+                    if (ticker) {
+                        const width = ticker.scrollWidth / 2;
+                        if (Math.abs(position) >= width) {
+                            position = 0;
+                        }
+                        ticker.style.transform = `translateX(${position}px)`;
+                    }
+                }
+                tickerAnimationId = requestAnimationFrame(animate);
+            }
+
+            animate();
+
+            // 사용자 인터랙션 감지
+            ticker.addEventListener('mouseenter', () => {
+                isUserInteracting = true;
+            });
+
+            ticker.addEventListener('mouseleave', () => {
+                isUserInteracting = false;
+            });
+
+            ticker.addEventListener('touchstart', () => {
+                isUserInteracting = true;
+            });
+
+            ticker.addEventListener('touchend', () => {
+                setTimeout(() => {
+                    isUserInteracting = false;
+                }, 2000);
+            });
+        }
+
+        function selectCategory(categoryKey) {
+            if (isInterestView) {
+                return;
+            }
+
+            // 모든 칩에서 active 제거
+            document.querySelectorAll('.category-chip').forEach(chip => {
+                chip.classList.remove('active');
+            });
+
+            // 선택된 칩에 active 추가
+            document.querySelectorAll(`[data-category-id="${categoryKey}"]`).forEach(chip => {
+                chip.classList.add('active');
+            });
+
+            currentCategory = categoryKey;
+            document.getElementById('refreshBtn').disabled = false;
+            document.getElementById('noSelection').style.display = 'none';
+            document.getElementById('statusBar').style.display = 'flex';
+            
+            // URL 업데이트
+            window.history.pushState({}, '', `/?category=${categoryKey}`);
+            
+            loadNews(categoryKey);
+        }
+
+        async function loadNews(categoryKey) {
+            if (!categoryKey) return;
+
+            const contentArea = document.getElementById('contentArea');
+            contentArea.innerHTML = '<div class="loading-state"><div class="spinner"></div><div class="loading-text">뉴스를 불러오는 중...</div></div>';
+
+            try {
+                const response = await fetch(`/api/news?category=${categoryKey}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    allNews = data.articles || [];
+                    updateStatus(data.category_name, data.count);
+                    
+                    if (allNews.length === 0) {
+                        showEmptyState('이 카테고리에는 아직 뉴스가 없습니다. 잠시 후 다시 시도해보세요.');
+                    } else {
+                        const validNews = allNews.filter(article => {
+                            const url = article.url || '';
+                            return !url.includes('example.com') && url && !article.title?.includes('최신 정보 및 팁');
+                        });
+                        
+                        if (validNews.length === 0) {
+                            showEmptyState('실제 뉴스를 찾지 못했습니다. 다른 카테고리를 시도해보세요.');
+                        } else {
+                            displayNews(validNews);
+                        }
+                    }
+                } else {
+                    showErrorState(data.message || '뉴스를 불러오는데 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('[프론트] 네트워크 오류:', error);
+                showErrorState('네트워크 오류가 발생했습니다. 서버가 실행 중인지 확인해주세요.');
+            }
+        }
+
+        function displayNews(articles) {
+            const contentArea = document.getElementById('contentArea');
+            const grid = document.createElement('div');
+            grid.className = 'news-grid';
+
+            articles.forEach((article, index) => {
+                const card = createNewsCard(article, index);
+                grid.appendChild(card);
+            });
+
+            contentArea.innerHTML = '';
+            contentArea.appendChild(grid);
+        }
+
+        function createNewsCard(article, index) {
+            const card = document.createElement('div');
+            card.className = 'news-card';
+            card.tabIndex = 0;
+            card.setAttribute('role', 'article');
+            card.setAttribute('aria-label', article.title);
+            
+            const url = article.url || '';
+            const hasValidUrl = isValidUrl(url);
+            
+            if (hasValidUrl) {
+                card.style.cursor = 'pointer';
+                card.onclick = () => {
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                };
+                
+                card.onkeydown = (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                    }
+                };
+            } else {
+                card.style.cursor = 'not-allowed';
+                card.style.opacity = '0.7';
+            }
+
+            const imageHtml = article.imageUrl 
+                ? `<img src="${article.imageUrl}" alt="${article.title}" class="news-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                   <div class="news-image-placeholder" style="display: none;">📰</div>`
+                : `<div class="news-image-placeholder">📰</div>`;
+
+            const summary = article.summary || '';
+            const date = formatDate(article.publishedAt);
+            const urlDisplay = hasValidUrl ? '' : '<span style="color: var(--error); font-size: 12px;">(원문 링크 없음)</span>';
+
+            card.innerHTML = `
+                <div class="news-image-wrapper">
+                    ${imageHtml}
+                </div>
+                <div class="news-content">
+                    <div class="news-source">${escapeHtml(article.source || 'Unknown')}</div>
+                    <h2 class="news-title">${escapeHtml(article.title)}</h2>
+                    ${summary ? `<p class="news-summary">${escapeHtml(summary)}</p>` : ''}
+                    <div class="news-meta">
+                        <div class="news-date">
+                            <span>📅</span>
+                            <span>${date}</span>
+                            ${urlDisplay}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        function isValidUrl(url) {
+            if (!url || typeof url !== 'string') return false;
+            if (url.includes('example.com') || url.startsWith('https://example') || url === '' || url === '#') {
+                return false;
+            }
+            try {
+                const parsed = new URL(url);
+                return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+            } catch {
+                return false;
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '날짜 정보 없음';
+            try {
+                const date = new Date(dateString);
+                const now = new Date();
+                const diff = now - date;
+                const minutes = Math.floor(diff / 60000);
+                const hours = Math.floor(diff / 3600000);
+                const days = Math.floor(diff / 86400000);
+
+                if (minutes < 1) return '방금 전';
+                if (minutes < 60) return `${minutes}분 전`;
+                if (hours < 24) return `${hours}시간 전`;
+                if (days < 7) return `${days}일 전`;
+                
+                return date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+            } catch {
+                return dateString;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function updateStatus(categoryName, count) {
+            document.getElementById('statusText').textContent = `${categoryName} · 총 ${count}개`;
+        }
+
+        function showEmptyState(message) {
+            const contentArea = document.getElementById('contentArea');
+            contentArea.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <div class="empty-title">뉴스가 없습니다</div>
+                    <div class="empty-text">${message}</div>
+                </div>
+            `;
+        }
+
+        function showErrorState(message) {
+            const contentArea = document.getElementById('contentArea');
+            contentArea.innerHTML = `
+                <div class="error-state">
+                    <div class="error-icon">⚠️</div>
+                    <div class="error-title">오류가 발생했습니다</div>
+                    <div class="error-text">${escapeHtml(message)}</div>
+                    <button class="btn btn-primary" onclick="loadNews('${currentCategory}')" style="margin-top: 16px;">다시 시도</button>
+                </div>
+            `;
+        }
+
+        async function refreshNews() {
+            if (!currentCategory) return;
+
+            const refreshBtn = document.getElementById('refreshBtn');
+            refreshBtn.disabled = true;
+            refreshBtn.innerHTML = '<span>🔄</span><span>새로고침 중...</span>';
+
+            try {
+                const response = await fetch(`/api/news/refresh?category=${currentCategory}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    await loadNews(currentCategory);
+                    showToast('뉴스가 새로고침되었습니다.', 'success');
+                } else {
+                    showToast(data.message || '새로고침에 실패했습니다.', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('새로고침 중 오류가 발생했습니다.', 'error');
+            } finally {
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '<span>🔄</span><span>새로고침</span>';
+            }
+        }
+
+        function showToast(message, type = '') {
+            const toast = document.getElementById('toast');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            toast.style.display = 'block';
+
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        // 관심 카테고리 보기
+        function toggleInterestView() {
+            isInterestView = !isInterestView;
+            
+            const normalView = document.getElementById('normalView');
+            const interestView = document.getElementById('interestView');
+            const btn = document.getElementById('interestViewBtn');
+            
+            if (isInterestView) {
+                normalView.style.display = 'none';
+                interestView.classList.add('active');
+                btn.innerHTML = '<span>←</span><span>일반 보기</span>';
+                loadInterestView();
+            } else {
+                normalView.style.display = 'block';
+                interestView.classList.remove('active');
+                btn.innerHTML = '<span>⭐</span><span>관심 카테고리 보기</span>';
+            }
+        }
+
+        async function loadInterestView() {
+            const selectedContainer = document.getElementById('interestSelected');
+            const sectionsContainer = document.getElementById('interestSections');
+            
+            if (interestCategories.length === 0) {
+                selectedContainer.innerHTML = '<span style="color: var(--text-secondary);">관심 카테고리를 선택해주세요</span>';
+                sectionsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">⭐</div>
+                        <div class="empty-title">관심 카테고리가 없습니다</div>
+                        <div class="empty-text">위의 "편집" 버튼을 눌러 관심 카테고리를 선택해주세요</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // 선택된 카테고리 표시
+            selectedContainer.innerHTML = '';
+            interestCategories.forEach(id => {
+                if (categories[id]) {
+                    const chip = document.createElement('div');
+                    chip.className = 'interest-chip';
+                    chip.innerHTML = `
+                        <span>${categories[id]}</span>
+                        <span class="remove" onclick="removeInterestCategory('${id}')">×</span>
+                    `;
+                    selectedContainer.appendChild(chip);
+                }
+            });
+
+            // 각 카테고리별 뉴스 로드
+            sectionsContainer.innerHTML = '<div class="loading-state"><div class="spinner"></div><div class="loading-text">뉴스를 불러오는 중...</div></div>';
+
+            const sections = [];
+            for (const categoryId of interestCategories) {
+                if (!categories[categoryId]) continue;
+                
+                try {
+                    const response = await fetch(`/api/news?category=${categoryId}`);
+                    const data = await response.json();
+                    
+                    if (data.success && data.articles && data.articles.length > 0) {
+                        const validNews = data.articles.filter(article => {
+                            const url = article.url || '';
+                            return !url.includes('example.com') && url;
+                        });
+                        
+                        if (validNews.length > 0) {
+                            sections.push({
+                                id: categoryId,
+                                name: data.category_name,
+                                articles: validNews
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error(`[관심 카테고리] ${categoryId} 로드 오류:`, error);
+                }
+            }
+
+            // 섹션 렌더링
+            if (sections.length === 0) {
+                sectionsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📰</div>
+                        <div class="empty-title">뉴스를 찾을 수 없습니다</div>
+                        <div class="empty-text">선택한 카테고리에서 뉴스를 불러올 수 없습니다</div>
+                    </div>
+                `;
+                return;
+            }
+
+            sectionsContainer.innerHTML = '';
+            sections.forEach(section => {
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = 'interest-section';
+                
+                const title = document.createElement('h2');
+                title.className = 'interest-section-title';
+                title.textContent = section.name;
+                
+                const grid = document.createElement('div');
+                grid.className = 'news-grid';
+                
+                section.articles.forEach((article, index) => {
+                    const card = createNewsCard(article, index);
+                    grid.appendChild(card);
+                });
+                
+                sectionDiv.appendChild(title);
+                sectionDiv.appendChild(grid);
+                sectionsContainer.appendChild(sectionDiv);
+            });
+        }
+
+        function removeInterestCategory(categoryId) {
+            interestCategories = interestCategories.filter(id => id !== categoryId);
+            saveStorage();
+            loadInterestView();
+        }
+
+        function openInterestModal() {
+            const modal = document.getElementById('interestModal');
+            const content = document.getElementById('interestModalContent');
+            content.innerHTML = '';
+
+            Object.entries(categories).forEach(([id, label]) => {
+                const item = document.createElement('label');
+                item.className = 'interest-checkbox-item';
+                const checked = interestCategories.includes(id);
+                item.innerHTML = `
+                    <input type="checkbox" class="interest-checkbox" value="${id}" ${checked ? 'checked' : ''}>
+                    <span>${label}</span>
+                `;
+                content.appendChild(item);
+            });
+
+            modal.classList.add('active');
+        }
+
+        function closeInterestModal() {
+            document.getElementById('interestModal').classList.remove('active');
+        }
+
+        function saveInterestCategories() {
+            const checkboxes = document.querySelectorAll('.interest-checkbox:checked');
+            interestCategories = Array.from(checkboxes).map(cb => cb.value);
+            saveStorage();
+            closeInterestModal();
+            loadInterestView();
+            showToast('관심 카테고리가 저장되었습니다.', 'success');
+        }
+    </script>
+</body>
+</html>

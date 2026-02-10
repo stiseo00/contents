@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관심사 오늘의 피드</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div>
+        <h1>오늘의 관심사 피드</h1>
+        <p class="subtitle">Asia/Seoul 기준 오늘 올라온 글만 모아요.</p>
+        <div class="badge-row">
+          {% for cat in categories %}
+            <span class="badge">{{ cat }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="actions">
+        <form method="post" action="/refresh">
+          <button class="btn primary" type="submit">오늘 글 다시 수집</button>
+        </form>
+        <a class="btn ghost" href="/preferences">관심사 변경</a>
+      </div>
+    </header>
+
+    <main class="cards">
+      {% if items %}
+        {% for item in items %}
+        <article class="card">
+          <div class="thumb">
+            {% if item.image_url %}
+              <img src="{{ item.image_url }}" alt="{{ item.title }}">
+            {% else %}
+              <div class="placeholder">NO IMAGE</div>
+            {% endif %}
+          </div>
+          <div class="content">
+            <div class="badge small">{{ item.category }}</div>
+            <h3>
+              <a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a>
+            </h3>
+            <p>{{ item.summary | truncate(240, True, '...') }}</p>
+            <div class="meta">
+              <span class="source">{{ item.source }}</span>
+              <span class="time">{{ item.published_at | replace('T', ' ') }}</span>
+            </div>
+          </div>
+        </article>
+        {% endfor %}
+      {% else %}
+        <div class="empty">
+          <p>오늘 수집된 글이 없습니다. “오늘 글 다시 수집”을 눌러보세요.</p>
+        </div>
+      {% endif %}
+    </main>
+  </div>
+</body>
+</html>
