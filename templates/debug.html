@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>카테고리 클릭 디버그</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .active { background: blue; color: white; }
+        #log { margin-top: 20px; border: 1px solid #ddd; padding: 10px; height: 300px; overflow-y: scroll; }
+        .log-item { padding: 5px; border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+    <h1>카테고리 클릭 디버그</h1>
+    <p>각 버튼을 클릭하면 아래 로그에 API 응답이 표시됩니다.</p>
+    
+    <div id="buttons"></div>
+    <div id="result"></div>
+    <div id="log"></div>
+    
+    <script>
+        const categories = {
+            'food': '맛집·레시피',
+            'travel': '여행·주말나들이',
+            'health': '건강·운동',
+            'finance': '재테크·돈관리',
+            'relationship': '연애·관계·심리',
+            'beauty': '뷰티·패션·그루밍'
+        };
+        
+        let currentCategory = null;
+        const logDiv = document.getElementById('log');
+        
+        function addLog(message) {
+            const item = document.createElement('div');
+            item.className = 'log-item';
+            item.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.insertBefore(item, logDiv.firstChild);
+        }
+        
+        async function selectCategory(id) {
+            addLog(`━━━ 클릭: ${id} (이전: ${currentCategory}) ━━━`);
+            
+            // 활성 상태 변경
+            document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            currentCategory = id;
+            
+            // API 호출
+            const result = document.getElementById('result');
+            result.innerHTML = '로딩 중...';
+            
+            try {
+                const url = `http://localhost:8000/api/news?category=${id}`;
+                addLog(`API 호출: ${url}`);
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                addLog(`응답: ${data.category_name} - ${data.count}개`);
+                
+                result.innerHTML = `
+                    <h2>${data.category_name}</h2>
+                    <p>총 ${data.count}개</p>
+                    <p>첫 기사: ${data.articles[0]?.title}</p>
+                `;
+            } catch (error) {
+                addLog(`오류: ${error.message}`);
+                result.innerHTML = `오류: ${error.message}`;
+            }
+        }
+        
+        // 버튼 생성
+        const container = document.getElementById('buttons');
+        Object.entries(categories).forEach(([id, label]) => {
+            const btn = document.createElement('button');
+            btn.textContent = label;
+            btn.onclick = () => selectCategory(id);
+            container.appendChild(btn);
+        });
+        
+        addLog('페이지 로드 완료');
+    </script>
+</body>
+</html>

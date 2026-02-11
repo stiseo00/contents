@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>최종 테스트</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .test-buttons { margin: 20px 0; }
+        button { padding: 15px 30px; margin: 5px; font-size: 16px; cursor: pointer; border: 2px solid #333; background: white; border-radius: 8px; }
+        button.active { background: #2563eb; color: white; border-color: #2563eb; }
+        #status { padding: 10px; margin: 10px 0; background: #f0f0f0; border-radius: 5px; }
+        #content { margin-top: 20px; }
+        .article { padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+        .article-title { font-weight: bold; margin-bottom: 5px; }
+        .loading { text-align: center; padding: 40px; font-size: 18px; color: #666; }
+    </style>
+</head>
+<body>
+    <h1>카테고리 클릭 테스트</h1>
+    <p>아래 버튼을 클릭하면 해당 카테고리의 뉴스가 표시됩니다.</p>
+    
+    <div class="test-buttons" id="buttons"></div>
+    <div id="status"></div>
+    <div id="content"></div>
+    
+    <script>
+        const categories = {
+            'food': '맛집·레시피',
+            'travel': '여행·주말나들이',
+            'health': '건강·운동',
+            'finance': '재테크·돈관리',
+            'relationship': '연애·관계·심리',
+            'beauty': '뷰티·패션·그루밍'
+        };
+        
+        let currentCategory = null;
+        
+        async function selectCategory(id, buttonEl) {
+            console.log('━━━━━━━━━━━━━━━━');
+            console.log('클릭된 카테고리:', id);
+            console.log('이전 카테고리:', currentCategory);
+            
+            currentCategory = id;
+            
+            // 모든 버튼 비활성화
+            document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            buttonEl.classList.add('active');
+            
+            // 상태 표시
+            const status = document.getElementById('status');
+            status.innerHTML = `현재 카테고리: <strong>${categories[id]}</strong>`;
+            
+            // 콘텐츠 영역
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="loading">뉴스를 불러오는 중...</div>';
+            
+            try {
+                const url = `http://localhost:8000/api/news?category=${id}`;
+                console.log('API 호출:', url);
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                console.log('응답:', data.category_name, '-', data.count, '개');
+                console.log('첫 기사:', data.articles[0]?.title);
+                
+                // 결과 표시
+                let html = `<h2>${data.category_name} (총 ${data.count}개)</h2>`;
+                data.articles.slice(0, 5).forEach((article, i) => {
+                    html += `
+                        <div class="article">
+                            <div class="article-title">${i+1}. ${article.title}</div>
+                            <div style="color: #666; font-size: 14px;">${article.source} | ${article.publishedAt?.substring(0,10)}</div>
+                        </div>
+                    `;
+                });
+                
+                content.innerHTML = html;
+                console.log('화면 업데이트 완료');
+                
+            } catch (error) {
+                console.error('오류:', error);
+                content.innerHTML = `<div style="color: red;">오류: ${error.message}</div>`;
+            }
+        }
+        
+        // 버튼 생성
+        const container = document.getElementById('buttons');
+        Object.entries(categories).forEach(([id, label]) => {
+            const btn = document.createElement('button');
+            btn.textContent = label;
+            btn.onclick = function() { selectCategory(id, this); };
+            container.appendChild(btn);
+        });
+        
+        console.log('페이지 로드 완료. 버튼을 클릭하세요.');
+    </script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>카테고리 테스트</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .chip { 
+            display: inline-block; 
+            padding: 10px 20px; 
+            margin: 5px; 
+            border: 2px solid #333; 
+            border-radius: 20px; 
+            cursor: pointer; 
+            background: white;
+        }
+        .chip.active { background: #2563eb; color: white; }
+        #result { 
+            margin-top: 20px; 
+            padding: 20px; 
+            border: 1px solid #ddd; 
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <h1>카테고리 클릭 테스트</h1>
+    
+    <div id="categories"></div>
+    <div id="result">카테고리를 선택하세요</div>
+    
+    <script>
+        const categories = {
+            'food': '맛집·레시피',
+            'travel': '여행·주말나들이',
+            'health': '건강·운동',
+            'finance': '재테크·돈관리'
+        };
+        
+        let currentCategory = null;
+        
+        function createChip(id, label) {
+            const chip = document.createElement('button');
+            chip.className = 'chip';
+            chip.textContent = label;
+            chip.onclick = () => selectCategory(id);
+            return chip;
+        }
+        
+        function selectCategory(id) {
+            console.log('선택:', id, '이전:', currentCategory);
+            currentCategory = id;
+            
+            // active 클래스 업데이트
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // API 호출
+            loadNews(id);
+        }
+        
+        async function loadNews(category) {
+            const result = document.getElementById('result');
+            result.innerHTML = '로딩 중...';
+            
+            try {
+                const response = await fetch(`http://localhost:8000/api/news?category=${category}`);
+                const data = await response.json();
+                
+                result.innerHTML = `
+                    <h2>${data.category_name}</h2>
+                    <p>총 ${data.count}개</p>
+                    <ul>
+                        ${data.articles.slice(0, 3).map(a => `<li>${a.title}</li>`).join('')}
+                    </ul>
+                `;
+            } catch (error) {
+                result.innerHTML = `오류: ${error.message}`;
+            }
+        }
+        
+        // 카테고리 칩 생성
+        const container = document.getElementById('categories');
+        Object.entries(categories).forEach(([id, label]) => {
+            container.appendChild(createChip(id, label));
+        });
+    </script>
+</body>
+</html>

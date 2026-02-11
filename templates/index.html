@@ -598,10 +598,6 @@
                         <span>⭐</span>
                         <span>관심 카테고리 보기</span>
                     </button>
-                    <button class="btn" id="refreshBtn" onclick="refreshNews()" disabled>
-                        <span>🔄</span>
-                        <span>새로고침</span>
-                    </button>
                 </div>
             </div>
         </div>
@@ -685,14 +681,36 @@
 
         // 페이지 로드 시 초기화
         window.addEventListener('DOMContentLoaded', () => {
+            console.log('[DOMContentLoaded] 페이지 로드');
+            
             loadStorage();
             loadCategories();
             
-            // URL 파라미터에서 카테고리 확인
+            // URL 파라미터에서 카테고리 확인 및 자동 로드
             const urlParams = new URLSearchParams(window.location.search);
             const categoryParam = urlParams.get('category');
+            
+            console.log('[DOMContentLoaded] URL 파라미터 카테고리:', categoryParam);
+            
             if (categoryParam) {
-                selectCategory(categoryParam);
+                // URL에 카테고리가 있으면 해당 카테고리 로드
+                currentCategory = categoryParam;
+                
+                // active 상태 설정
+                setTimeout(() => {
+                    document.querySelectorAll('.category-chip').forEach(chip => {
+                        if (chip.dataset.categoryId === categoryParam) {
+                            chip.classList.add('active');
+                        }
+                    });
+                }, 100);
+                
+                // 뉴스 로드
+                document.getElementById('noSelection').style.display = 'none';
+                document.getElementById('statusBar').style.display = 'flex';
+                loadNews(categoryParam);
+            } else {
+                console.log('[DOMContentLoaded] 카테고리 선택 대기');
             }
         });
 
@@ -743,11 +761,14 @@
             // 카테고리를 배열로 변환
             const categoryArray = Object.entries(categories).map(([id, label]) => ({ id, label }));
             
-            // 무한 루프를 위해 2번 복제
-            const doubledCategories = [...categoryArray, ...categoryArray];
+            // 무한 루프를 위해 2번 복제 (각각 고유 인덱스 추가)
+            const doubledCategories = [
+                ...categoryArray.map((cat, idx) => ({ ...cat, uniqueId: `${cat.id}_1_${idx}` })),
+                ...categoryArray.map((cat, idx) => ({ ...cat, uniqueId: `${cat.id}_2_${idx}` }))
+            ];
             
-            doubledCategories.forEach(({ id, label }) => {
-                const chip = createCategoryChip(id, label, false);
+            doubledCategories.forEach(({ id, label, uniqueId }) => {
+                const chip = createCategoryChip(id, label, false, uniqueId);
                 ticker.appendChild(chip);
             });
 
@@ -755,24 +776,58 @@
             startAutoScroll();
         }
 
-        function createCategoryChip(id, label, isFavorite = false) {
+        function createCategoryChip(id, label, isFavorite = false, uniqueId = null) {
             const chip = document.createElement('button');
             chip.className = 'category-chip';
-            chip.dataset.categoryId = id;
+            chip.dataset.categoryId = id;  // 실제 카테고리 ID
+            if (uniqueId) {
+                chip.dataset.uniqueId = uniqueId;  // DOM 고유 ID
+            }
             chip.setAttribute('aria-label', `${label} 카테고리 선택`);
+            chip.type = 'button';
             
             const isFav = favoriteCategories.includes(id);
             
+            // 즐겨찾기 별 생성
+            const favoriteStarHtml = isFavorite 
+                ? `<span class="favorite-star active" data-fav-id="${id}">⭐</span>` 
+                : `<span class="favorite-star ${isFav ? 'active' : ''}" data-fav-id="${id}">${isFav ? '⭐' : '☆'}</span>`;
+            
             chip.innerHTML = `
-                ${isFavorite ? `<span class="favorite-star active" onclick="event.stopPropagation(); toggleFavorite('${id}')">⭐</span>` : ''}
-                <span>${label}</span>
-                ${!isFavorite ? `<span class="favorite-star ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); toggleFavorite('${id}')">${isFav ? '⭐' : '☆'}</span>` : ''}
+                ${isFavorite ? `<span class="favorite-star active" data-fav-id="${id}">⭐</span>` : ''}
+                <span class="chip-label" data-category="${id}">${label}</span>
+                ${!isFavorite ? favoriteStarHtml : ''}
             `;
             
-            chip.onclick = (e) => {
-                if (!e.target.classList.contains('favorite-star')) {
-                    selectCategory(id);
+            // 클릭 이벤트
+            chip.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const target = e.target;
+                
+                // 즐겨찾기 별 클릭 체크
+                if (target.classList.contains('favorite-star') || target.hasAttribute('data-fav-id')) {
+                    const favId = target.getAttribute('data-fav-id');
+                    if (favId) {
+                        console.log(`[chip.onclick] 즐겨찾기 토글: ${favId}`);
+                        toggleFavorite(favId);
+                        return false;
+                    }
                 }
+                
+                // data-category-id에서 실제 카테고리 ID 가져오기
+                const categoryId = this.dataset.categoryId;
+                const unique = this.dataset.uniqueId || 'no-unique';
+                console.log(`[chip.onclick] 클릭됨 - 카테고리: ${categoryId}, 고유ID: ${unique}`);
+                
+                if (categoryId) {
+                    selectCategory(categoryId);
+                } else {
+                    console.error('[chip.onclick] categoryId를 찾을 수 없음');
+                }
+                
+                return false;
             };
 
             return chip;
@@ -843,7 +898,21 @@
 
             animate();
 
-            // 사용자 인터랙션 감지
+            // 사용자 인터랙션 감지 (클릭 시 일시 정지)
+            ticker.addEventListener('mousedown', () => {
+                console.log('[autoScroll] mousedown - 자동 스크롤 일시 정지');
+                isUserInteracting = true;
+                autoScrollPaused = true;
+            });
+
+            ticker.addEventListener('mouseup', () => {
+                console.log('[autoScroll] mouseup - 자동 스크롤 재개 예약');
+                setTimeout(() => {
+                    isUserInteracting = false;
+                    autoScrollPaused = false;
+                }, 500); // 클릭 후 0.5초 대기
+            });
+
             ticker.addEventListener('mouseenter', () => {
                 isUserInteracting = true;
             });
@@ -854,6 +923,7 @@
 
             ticker.addEventListener('touchstart', () => {
                 isUserInteracting = true;
+                autoScrollPaused = true;
             });
 
             ticker.addEventListener('touchend', () => {
@@ -863,47 +933,77 @@
             });
         }
 
-        function selectCategory(categoryKey) {
+        async function selectCategory(categoryKey) {
+            console.log(`━━━━━━ selectCategory 시작 ━━━━━━`);
+            console.log(`요청 카테고리: ${categoryKey}`);
+            console.log(`현재 카테고리: ${currentCategory}`);
+            console.log(`isInterestView: ${isInterestView}`);
+            
             if (isInterestView) {
+                console.log('관심 카테고리 뷰 모드 - 종료');
                 return;
             }
 
-            // 모든 칩에서 active 제거
-            document.querySelectorAll('.category-chip').forEach(chip => {
-                chip.classList.remove('active');
-            });
+            if (!categoryKey) {
+                console.warn('카테고리 키가 없습니다 - 종료');
+                return;
+            }
 
-            // 선택된 칩에 active 추가
-            document.querySelectorAll(`[data-category-id="${categoryKey}"]`).forEach(chip => {
-                chip.classList.add('active');
-            });
-
-            currentCategory = categoryKey;
-            document.getElementById('refreshBtn').disabled = false;
-            document.getElementById('noSelection').style.display = 'none';
-            document.getElementById('statusBar').style.display = 'flex';
-            
-            // URL 업데이트
-            window.history.pushState({}, '', `/?category=${categoryKey}`);
-            
-            loadNews(categoryKey);
+            // URL 먼저 변경 (페이지 이동)
+            const newUrl = `/?category=${encodeURIComponent(categoryKey)}`;
+            console.log(`URL 변경: ${window.location.href} -> ${newUrl}`);
+            window.location.href = newUrl;  // 페이지 새로고침과 함께 이동
         }
 
         async function loadNews(categoryKey) {
-            if (!categoryKey) return;
+            if (!categoryKey) {
+                console.warn('[loadNews] 카테고리 키가 없습니다');
+                return;
+            }
 
+            // 현재 카테고리 업데이트
+            currentCategory = categoryKey;
+
+            console.log(`[loadNews] 카테고리 로드 시작: ${categoryKey}`);
             const contentArea = document.getElementById('contentArea');
+            if (!contentArea) {
+                console.error('[loadNews] contentArea 요소를 찾을 수 없습니다');
+                return;
+            }
+            
             contentArea.innerHTML = '<div class="loading-state"><div class="spinner"></div><div class="loading-text">뉴스를 불러오는 중...</div></div>';
 
             try {
-                const response = await fetch(`/api/news?category=${categoryKey}`);
+                const url = `/api/news?category=${encodeURIComponent(categoryKey)}`;
+                console.log(`[loadNews] API 호출: ${url}`);
+                
+                const response = await fetch(url);
+                console.log(`[loadNews] 응답 상태: ${response.status}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
+                console.log(`[loadNews] 응답 데이터:`, {
+                    success: data.success,
+                    category: data.category,
+                    category_name: data.category_name,
+                    count: data.count,
+                    articles_count: data.articles?.length || 0
+                });
                 
                 if (data.success) {
                     allNews = data.articles || [];
-                    updateStatus(data.category_name, data.count);
+                    
+                    // 상태바 즉시 업데이트
+                    const categoryName = data.category_name || categories[categoryKey] || categoryKey;
+                    const count = data.count || allNews.length;
+                    updateStatus(categoryName, count);
+                    console.log(`[loadNews] 상태바 업데이트: ${categoryName} · 총 ${count}개`);
                     
                     if (allNews.length === 0) {
+                        console.warn(`[loadNews] 뉴스가 없습니다: ${categoryKey}`);
                         showEmptyState('이 카테고리에는 아직 뉴스가 없습니다. 잠시 후 다시 시도해보세요.');
                     } else {
                         const validNews = allNews.filter(article => {
@@ -911,23 +1011,34 @@
                             return !url.includes('example.com') && url && !article.title?.includes('최신 정보 및 팁');
                         });
                         
+                        console.log(`[loadNews] 유효한 뉴스: ${validNews.length}개 (전체: ${allNews.length}개)`);
+                        
                         if (validNews.length === 0) {
                             showEmptyState('실제 뉴스를 찾지 못했습니다. 다른 카테고리를 시도해보세요.');
                         } else {
                             displayNews(validNews);
+                            console.log(`[loadNews] 뉴스 표시 완료: ${categoryKey}`);
                         }
                     }
                 } else {
+                    console.error(`[loadNews] API 실패:`, data.message);
                     showErrorState(data.message || '뉴스를 불러오는데 실패했습니다.');
                 }
             } catch (error) {
-                console.error('[프론트] 네트워크 오류:', error);
-                showErrorState('네트워크 오류가 발생했습니다. 서버가 실행 중인지 확인해주세요.');
+                console.error('[loadNews] 네트워크 오류:', error);
+                showErrorState(`네트워크 오류가 발생했습니다: ${error.message}`);
             }
         }
 
         function displayNews(articles) {
+            console.log(`[displayNews] 뉴스 표시 시작: ${articles.length}개`);
             const contentArea = document.getElementById('contentArea');
+            
+            if (!contentArea) {
+                console.error('[displayNews] contentArea 요소를 찾을 수 없습니다');
+                return;
+            }
+            
             const grid = document.createElement('div');
             grid.className = 'news-grid';
 
@@ -936,8 +1047,10 @@
                 grid.appendChild(card);
             });
 
+            // 기존 내용 완전히 제거 후 새 그리드 추가
             contentArea.innerHTML = '';
             contentArea.appendChild(grid);
+            console.log(`[displayNews] 뉴스 표시 완료: ${articles.length}개`);
         }
 
         function createNewsCard(article, index) {
@@ -1038,7 +1151,13 @@
         }
 
         function updateStatus(categoryName, count) {
-            document.getElementById('statusText').textContent = `${categoryName} · 총 ${count}개`;
+            const statusText = document.getElementById('statusText');
+            if (statusText) {
+                statusText.textContent = `${categoryName} · 총 ${count}개`;
+                console.log(`[updateStatus] 상태바 업데이트: ${categoryName} · 총 ${count}개`);
+            } else {
+                console.warn('[updateStatus] statusText 요소를 찾을 수 없습니다');
+            }
         }
 
         function showEmptyState(message) {
@@ -1064,31 +1183,7 @@
             `;
         }
 
-        async function refreshNews() {
-            if (!currentCategory) return;
-
-            const refreshBtn = document.getElementById('refreshBtn');
-            refreshBtn.disabled = true;
-            refreshBtn.innerHTML = '<span>🔄</span><span>새로고침 중...</span>';
-
-            try {
-                const response = await fetch(`/api/news/refresh?category=${currentCategory}`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    await loadNews(currentCategory);
-                    showToast('뉴스가 새로고침되었습니다.', 'success');
-                } else {
-                    showToast(data.message || '새로고침에 실패했습니다.', 'error');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('새로고침 중 오류가 발생했습니다.', 'error');
-            } finally {
-                refreshBtn.disabled = false;
-                refreshBtn.innerHTML = '<span>🔄</span><span>새로고침</span>';
-            }
-        }
+        // 새로고침 버튼 제거됨 - 카테고리 클릭 시 자동으로 뉴스 로드
 
         function showToast(message, type = '') {
             const toast = document.getElementById('toast');
